@@ -9,6 +9,7 @@ export function useSwipeDeck(restaurants: Restaurant[]) {
   const currentCard = restaurants[currentIndex] ?? null
   const nextCard = restaurants[currentIndex + 1] ?? null
   const isExhausted = currentIndex >= restaurants.length
+  const remainingCount = Math.max(0, restaurants.length - currentIndex)
 
   function advance() {
     setCurrentIndex((i) => i + 1)
@@ -18,5 +19,5 @@ export function useSwipeDeck(restaurants: Restaurant[]) {
     setCurrentIndex(0)
   }
 
-  return { currentCard, nextCard, isExhausted, advance, reset }
+  return { currentCard, nextCard, isExhausted, remainingCount, advance, reset }
 }

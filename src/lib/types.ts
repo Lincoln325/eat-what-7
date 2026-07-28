@@ -1,21 +1,13 @@
-export type CuisineType =
-  | 'Chinese'
-  | 'Japanese'
-  | 'Korean'
-  | 'Western'
-  | 'Thai'
-  | 'Italian'
-  | 'Indian'
-
 export interface Restaurant {
   id: string
   name: string
-  cuisine: CuisineType
-  imageUrl: string
-  rating: number
-  distanceKm: number
-  priceRange: 1 | 2 | 3
+  cuisineLabel: string
+  imageUrl: string | null
+  imageBlurhash: string | null
+  rating: number | null
+  priceLevel: number | null
   tags: string[]
+  googleMapsUri: string | null
 }
 
 export type AppView = 'swipe' | 'selection'

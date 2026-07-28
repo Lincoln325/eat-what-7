@@ -1,20 +1,15 @@
 'use client'
 
-import { useState, useMemo } from 'react'
-import type { CuisineType, Restaurant } from '@/lib/types'
-import { MOCK_RESTAURANTS } from '@/lib/mock-data'
+import { useState } from 'react'
 
+// Multi-select cuisine filter, using CUISINE_FILTERS keys. Matches the
+// comma-separated `cuisine` query param /api/restaurants accepts.
 export function useFilter() {
-  const [activeFilters, setActiveFilters] = useState<CuisineType[]>([])
+  const [activeFilters, setActiveFilters] = useState<string[]>([])
 
-  const filteredRestaurants = useMemo<Restaurant[]>(() => {
-    if (activeFilters.length === 0) return MOCK_RESTAURANTS
-    return MOCK_RESTAURANTS.filter((r) => activeFilters.includes(r.cuisine))
-  }, [activeFilters])
-
-  function toggleFilter(cuisine: CuisineType) {
+  function toggleFilter(key: string) {
     setActiveFilters((prev) =>
-      prev.includes(cuisine) ? prev.filter((c) => c !== cuisine) : [...prev, cuisine],
+      prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key],
     )
   }
 
@@ -22,5 +17,5 @@ export function useFilter() {
     setActiveFilters([])
   }
 
-  return { activeFilters, filteredRestaurants, toggleFilter, clearFilters }
+  return { activeFilters, toggleFilter, clearFilters }
 }

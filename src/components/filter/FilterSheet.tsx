@@ -3,23 +3,22 @@
 import { SlidersHorizontal } from 'lucide-react'
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger, SheetClose } from '@/components/ui/sheet'
 import { Button } from '@/components/ui/button'
-import { CUISINE_TYPES } from '@/lib/mock-data'
-import type { CuisineType } from '@/lib/types'
+import { CUISINE_FILTERS } from '@/lib/domain/cuisine-mapping'
 import { cn } from '@/lib/utils'
 
-const CUISINE_EMOJI: Record<CuisineType, string> = {
-  Chinese: '🥟',
-  Japanese: '🍣',
-  Korean: '🥩',
-  Western: '🍔',
-  Thai: '🌶️',
-  Italian: '🍕',
-  Indian: '🍛',
+const CUISINE_EMOJI: Record<string, string> = {
+  chinese: '🥟',
+  japanese: '🍣',
+  korean: '🥩',
+  western: '🍔',
+  thai: '🌶️',
+  italian: '🍕',
+  indian: '🍛',
 }
 
 interface FilterSheetProps {
-  activeFilters: CuisineType[]
-  onToggle: (cuisine: CuisineType) => void
+  activeFilters: string[]
+  onToggle: (key: string) => void
   onClear: () => void
 }
 
@@ -49,12 +48,12 @@ export function FilterSheet({ activeFilters, onToggle, onClear }: FilterSheetPro
         </SheetHeader>
 
         <div className="grid grid-cols-2 gap-3 mb-8">
-          {CUISINE_TYPES.map((cuisine) => {
-            const active = activeFilters.includes(cuisine)
+          {CUISINE_FILTERS.map(({ key, label }) => {
+            const active = activeFilters.includes(key)
             return (
               <button
-                key={cuisine}
-                onClick={() => onToggle(cuisine)}
+                key={key}
+                onClick={() => onToggle(key)}
                 aria-pressed={active}
                 className={cn(
                   'flex items-center gap-3 px-4 py-3 rounded-2xl border-2 text-sm font-medium transition-all active:scale-95 cursor-pointer',
@@ -63,8 +62,8 @@ export function FilterSheet({ activeFilters, onToggle, onClear }: FilterSheetPro
                     : 'bg-card border-border text-foreground',
                 )}
               >
-                <span className="text-lg" aria-hidden>{CUISINE_EMOJI[cuisine]}</span>
-                {cuisine}
+                <span className="text-lg" aria-hidden>{CUISINE_EMOJI[key]}</span>
+                {label}
               </button>
             )
           })}

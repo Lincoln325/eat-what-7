@@ -52,8 +52,10 @@ export function SelectionView({ selected, onRemove, onBack }: SelectionViewProps
         <div className="flex gap-3">
           {selected.map((restaurant) => (
             <div key={restaurant.id} className="flex-1 relative">
-              <div className="aspect-square rounded-2xl overflow-hidden shadow-sm">
-                <img src={restaurant.imageUrl} alt={restaurant.name} className="w-full h-full object-cover" />
+              <div className="aspect-square rounded-2xl overflow-hidden shadow-sm bg-muted">
+                {restaurant.imageUrl && (
+                  <img src={restaurant.imageUrl} alt={restaurant.name} className="w-full h-full object-cover" />
+                )}
               </div>
               <button
                 onClick={() => onRemove(restaurant.id)}

@@ -41,13 +41,15 @@ export function SwipeDeck({
     <div className="relative h-full w-full">
       {/* Background card (next) */}
       {nextCard && (
-        <div className="absolute inset-0 scale-95 translate-y-4 rounded-3xl overflow-hidden shadow-md">
-          <img
-            src={nextCard.imageUrl}
-            alt=""
-            aria-hidden
-            className="w-full h-full object-cover"
-          />
+        <div className="absolute inset-0 scale-95 translate-y-4 rounded-3xl overflow-hidden shadow-md bg-muted">
+          {nextCard.imageUrl && (
+            <img
+              src={nextCard.imageUrl}
+              alt=""
+              aria-hidden
+              className="w-full h-full object-cover"
+            />
+          )}
           <div className="absolute inset-0 bg-black/30" />
         </div>
       )}

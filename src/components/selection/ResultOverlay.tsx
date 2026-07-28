@@ -5,6 +5,8 @@ import type { Restaurant } from '@/lib/types'
 import { Button } from '@/components/ui/button'
 import { Star, MapPin, RotateCcw } from 'lucide-react'
 
+const PRICE_SYMBOLS: Record<number, string> = { 0: 'Free', 1: '$', 2: '$$', 3: '$$$', 4: '$$$$' }
+
 interface ResultOverlayProps {
   restaurant: Restaurant
   onDismiss: () => void
@@ -29,12 +31,14 @@ export function ResultOverlay({ restaurant, onDismiss }: ResultOverlayProps) {
         className="w-full max-w-[430px] bg-card rounded-t-3xl overflow-hidden pb-safe"
       >
         {/* Restaurant image */}
-        <div className="relative h-56">
-          <img
-            src={restaurant.imageUrl}
-            alt={restaurant.name}
-            className="w-full h-full object-cover"
-          />
+        <div className="relative h-56 bg-muted">
+          {restaurant.imageUrl && (
+            <img
+              src={restaurant.imageUrl}
+              alt={restaurant.name}
+              className="w-full h-full object-cover"
+            />
+          )}
           <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
           <div className="absolute bottom-4 left-0 right-0 flex flex-col items-center gap-1">
             <span className="text-4xl">🎉</span>
@@ -46,25 +50,38 @@ export function ResultOverlay({ restaurant, onDismiss }: ResultOverlayProps) {
         <div className="p-6">
           <h2 className="text-2xl font-bold font-heading text-foreground mb-1">{restaurant.name}</h2>
           <div className="flex items-center gap-3 text-sm text-muted-foreground mb-4">
-            <span className="bg-muted rounded-full px-3 py-1">{restaurant.cuisine}</span>
-            <span className="flex items-center gap-1">
-              <Star className="w-3.5 h-3.5 fill-yellow-500 stroke-yellow-500" />
-              {restaurant.rating}
-            </span>
-            <span className="flex items-center gap-1">
-              <MapPin className="w-3.5 h-3.5" />
-              {restaurant.distanceKm} km
-            </span>
+            <span className="bg-muted rounded-full px-3 py-1">{restaurant.cuisineLabel}</span>
+            {restaurant.rating !== null && (
+              <span className="flex items-center gap-1">
+                <Star className="w-3.5 h-3.5 fill-yellow-500 stroke-yellow-500" />
+                {restaurant.rating}
+              </span>
+            )}
+            {restaurant.priceLevel !== null && (
+              <span>{PRICE_SYMBOLS[restaurant.priceLevel]}</span>
+            )}
           </div>
 
-          <Button
-            onClick={onDismiss}
-            variant="outline"
-            className="w-full rounded-2xl h-12 gap-2"
-          >
-            <RotateCcw className="w-4 h-4" />
-            Spin Again
-          </Button>
+          <div className="flex gap-3">
+            {restaurant.googleMapsUri && (
+              <Button
+                render={<a href={restaurant.googleMapsUri} target="_blank" rel="noopener noreferrer" />}
+                variant="outline"
+                className="flex-1 rounded-2xl h-12 gap-2"
+              >
+                <MapPin className="w-4 h-4" />
+                View on Maps
+              </Button>
+            )}
+            <Button
+              onClick={onDismiss}
+              variant="outline"
+              className="flex-1 rounded-2xl h-12 gap-2"
+            >
+              <RotateCcw className="w-4 h-4" />
+              Spin Again
+            </Button>
+          </div>
         </div>
       </motion.div>
     </motion.div>

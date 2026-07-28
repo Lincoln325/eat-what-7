@@ -2,6 +2,7 @@
 
 import { useEffect } from 'react'
 import { useFilter } from '@/hooks/useFilter'
+import { useRestaurants } from '@/hooks/useRestaurants'
 import { useSwipeDeck } from '@/hooks/useSwipeDeck'
 import { useSelection } from '@/hooks/useSelection'
 import { SwipeDeck } from '@/components/swipe/SwipeDeck'
@@ -12,10 +13,13 @@ import { MAX_SELECTION } from '@/hooks/useSelection'
 import type { AppView } from '@/lib/types'
 import { useState } from 'react'
 
+const PREFETCH_THRESHOLD = 5
+
 export function AppShell() {
   const [view, setView] = useState<AppView>('swipe')
-  const { activeFilters, filteredRestaurants, toggleFilter, clearFilters } = useFilter()
-  const { currentCard, nextCard, isExhausted, advance, reset } = useSwipeDeck(filteredRestaurants)
+  const { activeFilters, toggleFilter, clearFilters } = useFilter()
+  const { restaurants, isReachingEnd, loadMore } = useRestaurants(activeFilters)
+  const { currentCard, nextCard, isExhausted, remainingCount, advance, reset } = useSwipeDeck(restaurants)
   const { selected, addToSelection, removeFromSelection } = useSelection()
 
   // Reset deck when filters change
@@ -23,6 +27,14 @@ export function AppShell() {
     reset()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeFilters.join(',')])
+
+  // Prefetch the next page before the deck actually runs dry
+  useEffect(() => {
+    if (!isReachingEnd && remainingCount <= PREFETCH_THRESHOLD) {
+      loadMore()
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [remainingCount, isReachingEnd])
 
   function handleSwipeLeft() {
     advance()
@@ -62,7 +74,7 @@ export function AppShell() {
             <SwipeDeck
               currentCard={currentCard}
               nextCard={nextCard}
-              isExhausted={isExhausted}
+              isExhausted={isExhausted && isReachingEnd}
               onSwipeLeft={handleSwipeLeft}
               onSwipeRight={handleSwipeRight}
               onReset={reset}

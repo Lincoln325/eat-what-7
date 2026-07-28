@@ -3,9 +3,9 @@
 import { useRef } from 'react'
 import { motion, useMotionValue, useTransform, animate } from 'framer-motion'
 import type { Restaurant } from '@/lib/types'
-import { Star, MapPin } from 'lucide-react'
+import { Star } from 'lucide-react'
 
-const PRICE_SYMBOLS = { 1: '$', 2: '$$', 3: '$$$' }
+const PRICE_SYMBOLS: Record<number, string> = { 0: 'Free', 1: '$', 2: '$$', 3: '$$$', 4: '$$$$' }
 const SWIPE_THRESHOLD = 100
 
 interface SwipeCardProps {
@@ -47,13 +47,15 @@ export function SwipeCard({ restaurant, onSwipeLeft, onSwipeRight, isTop }: Swip
       {/* Card */}
       <div className="relative h-full w-full rounded-3xl overflow-hidden shadow-xl bg-card">
         {/* Hero image */}
-        <div className="absolute inset-0">
-          <img
-            src={restaurant.imageUrl}
-            alt={restaurant.name}
-            className="w-full h-full object-cover"
-            draggable={false}
-          />
+        <div className="absolute inset-0 bg-muted">
+          {restaurant.imageUrl && (
+            <img
+              src={restaurant.imageUrl}
+              alt={restaurant.name}
+              className="w-full h-full object-cover"
+              draggable={false}
+            />
+          )}
           <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent" />
         </div>
 
@@ -77,23 +79,25 @@ export function SwipeCard({ restaurant, onSwipeLeft, onSwipeRight, isTop }: Swip
         <div className="absolute bottom-0 left-0 right-0 p-6 text-white">
           <div className="flex items-end justify-between gap-2 mb-2">
             <h2 className="text-2xl font-bold font-heading leading-tight">{restaurant.name}</h2>
-            <span className="text-sm font-medium opacity-80 shrink-0">{PRICE_SYMBOLS[restaurant.priceRange]}</span>
+            {restaurant.priceLevel !== null && (
+              <span className="text-sm font-medium opacity-80 shrink-0">
+                {PRICE_SYMBOLS[restaurant.priceLevel]}
+              </span>
+            )}
           </div>
 
           <div className="flex items-center gap-3 mb-3 text-sm">
-            <span className="bg-white/20 backdrop-blur-sm rounded-full px-3 py-1">{restaurant.cuisine}</span>
-            <span className="flex items-center gap-1">
-              <Star className="w-3.5 h-3.5 fill-yellow-400 stroke-yellow-400" />
-              {restaurant.rating}
-            </span>
-            <span className="flex items-center gap-1">
-              <MapPin className="w-3.5 h-3.5" />
-              {restaurant.distanceKm} km
-            </span>
+            <span className="bg-white/20 backdrop-blur-sm rounded-full px-3 py-1">{restaurant.cuisineLabel}</span>
+            {restaurant.rating !== null && (
+              <span className="flex items-center gap-1">
+                <Star className="w-3.5 h-3.5 fill-yellow-400 stroke-yellow-400" />
+                {restaurant.rating}
+              </span>
+            )}
           </div>
 
           <div className="flex flex-wrap gap-1.5">
-            {restaurant.tags.map((tag) => (
+            {restaurant.tags.slice(0, 4).map((tag) => (
               <span key={tag} className="text-xs bg-white/15 backdrop-blur-sm rounded-full px-2.5 py-1">
                 {tag}
               </span>
