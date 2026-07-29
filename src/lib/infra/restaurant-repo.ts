@@ -10,7 +10,9 @@ export interface RestaurantRecord {
 export interface RestaurantListItem {
   id: string
   name: string
+  name_zh: string | null
   primary_type: string | null
+  primary_type_display_name_zh: string | null
   tags: string[]
   rating: number | null
   price_level: number | null
@@ -35,7 +37,7 @@ export async function listRestaurants(
 
   let query = supabase
     .from('restaurants')
-    .select('id, name, primary_type, tags, rating, price_level, primary_image_path, image_blurhash, google_maps_uri')
+    .select('id, name, name_zh, primary_type, primary_type_display_name_zh, tags, rating, price_level, primary_image_path, image_blurhash, google_maps_uri')
     .range(offset, offset + limit - 1)
 
   if (cuisineKeys && cuisineKeys.length > 0) {

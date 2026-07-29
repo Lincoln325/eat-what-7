@@ -18,14 +18,21 @@ export interface PlaceDetails {
   businessStatus?: string
   types?: string[]
   primaryType?: string
+  primaryTypeDisplayName?: { text: string; languageCode?: string }
   googleMapsUri?: string
   photos?: Array<{ name: string; widthPx: number; heightPx: number }>
   [key: string]: unknown
 }
 
+export interface BilingualPlaceDetails {
+  en: PlaceDetails
+  zh_hk: PlaceDetails
+}
+
 export interface RestaurantRow {
   google_place_id: string
   name: string
+  name_zh: string | null
   address: string | null
   lat: number | null
   lng: number | null
@@ -37,8 +44,9 @@ export interface RestaurantRow {
   business_status: string
   tags: string[]
   primary_type: string | null
+  primary_type_display_name_zh: string | null
   google_maps_uri: string | null
-  raw_place_data: PlaceDetails
+  raw_place_data: BilingualPlaceDetails
 }
 
 const PRICE_LEVEL_TO_INT: Record<PriceLevelEnum, number> = {
@@ -55,23 +63,29 @@ export function mapPriceLevelToInt(priceLevel: PriceLevelEnum | undefined): numb
   return PRICE_LEVEL_TO_INT[priceLevel] ?? null
 }
 
-// Pure: map a PlaceDetails object to a DB row (no IDs, no image fields)
-export function mapPlaceToRestaurantRow(place: PlaceDetails): RestaurantRow {
+// Pure: merge English + Traditional Chinese PlaceDetails into one DB row.
+// Non-language fields (location, rating, etc.) are sourced from `en`, since
+// Google returns identical values for both — only text fields differ.
+export function mapPlaceToRestaurantRow(place: BilingualPlaceDetails): RestaurantRow {
+  const { en, zh_hk } = place
+
   return {
-    google_place_id: place.id,
-    name: place.displayName?.text ?? '',
-    address: place.formattedAddress ?? null,
-    lat: place.location?.latitude ?? null,
-    lng: place.location?.longitude ?? null,
-    price_level: mapPriceLevelToInt(place.priceLevel),
-    rating: place.rating ?? null,
-    total_ratings: place.userRatingCount ?? null,
-    phone: place.internationalPhoneNumber ?? null,
-    website: place.websiteUri ?? null,
-    business_status: place.businessStatus ?? 'OPERATIONAL',
-    tags: place.types ?? [],
-    primary_type: place.primaryType ?? null,
-    google_maps_uri: place.googleMapsUri ?? null,
+    google_place_id: en.id,
+    name: en.displayName?.text ?? '',
+    name_zh: zh_hk.displayName?.text ?? null,
+    address: en.formattedAddress ?? null,
+    lat: en.location?.latitude ?? null,
+    lng: en.location?.longitude ?? null,
+    price_level: mapPriceLevelToInt(en.priceLevel),
+    rating: en.rating ?? null,
+    total_ratings: en.userRatingCount ?? null,
+    phone: en.internationalPhoneNumber ?? null,
+    website: en.websiteUri ?? null,
+    business_status: en.businessStatus ?? 'OPERATIONAL',
+    tags: en.types ?? [],
+    primary_type: en.primaryType ?? null,
+    primary_type_display_name_zh: zh_hk.primaryTypeDisplayName?.text ?? null,
+    google_maps_uri: en.googleMapsUri ?? null,
     raw_place_data: place,
   }
 }

@@ -2,8 +2,8 @@ import { describe, it, expect } from 'vitest'
 import { findCuisineForRestaurant, getGoogleTypesForCuisineKey } from './cuisine-mapping'
 
 describe('findCuisineForRestaurant', () => {
-  it('matches a known primaryType to its cuisine filter', () => {
-    expect(findCuisineForRestaurant('sushi_restaurant')?.key).toBe('japanese')
+  it('matches sushi as its own subtype filter, not grouped under japanese', () => {
+    expect(findCuisineForRestaurant('sushi_restaurant')?.key).toBe('sushi')
   })
 
   it('matches generic cuisine primaryTypes', () => {
@@ -13,10 +13,10 @@ describe('findCuisineForRestaurant', () => {
     expect(findCuisineForRestaurant('indian_restaurant')?.key).toBe('indian')
   })
 
-  it('maps burger/steak/bbq primaryTypes to Western', () => {
-    expect(findCuisineForRestaurant('hamburger_restaurant')?.key).toBe('western')
-    expect(findCuisineForRestaurant('steak_house')?.key).toBe('western')
-    expect(findCuisineForRestaurant('barbecue_restaurant')?.key).toBe('western')
+  it('maps steak/burger/bbq primaryTypes to their own subtype filters', () => {
+    expect(findCuisineForRestaurant('hamburger_restaurant')?.key).toBe('burgers')
+    expect(findCuisineForRestaurant('steak_house')?.key).toBe('steakhouse')
+    expect(findCuisineForRestaurant('barbecue_restaurant')?.key).toBe('bbq')
   })
 
   it('returns null for unrecognised primaryType with no matching tags', () => {
@@ -30,12 +30,12 @@ describe('findCuisineForRestaurant', () => {
 
   it('falls back to tags when primaryType is generic and unmatched', () => {
     const result = findCuisineForRestaurant('restaurant', ['restaurant', 'steak_house', 'food'])
-    expect(result?.key).toBe('western')
+    expect(result?.key).toBe('steakhouse')
   })
 
   it('falls back to tags when primaryType is null', () => {
     const result = findCuisineForRestaurant(null, ['sushi_restaurant', 'restaurant'])
-    expect(result?.key).toBe('japanese')
+    expect(result?.key).toBe('sushi')
   })
 
   it('prefers primaryType match over tags when both would match different cuisines', () => {
@@ -51,7 +51,7 @@ describe('findCuisineForRestaurant', () => {
 describe('getGoogleTypesForCuisineKey', () => {
   it('returns the googleTypes array for a known key', () => {
     expect(getGoogleTypesForCuisineKey('japanese')).toEqual(
-      expect.arrayContaining(['japanese_restaurant', 'sushi_restaurant', 'ramen_restaurant'])
+      expect.arrayContaining(['japanese_restaurant', 'izakaya_restaurant'])
     )
   })
 

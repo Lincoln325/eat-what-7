@@ -4,8 +4,9 @@ import { useRef } from 'react'
 import { motion, useMotionValue, useTransform, animate } from 'framer-motion'
 import type { Restaurant } from '@/lib/types'
 import { Star } from 'lucide-react'
+import { BlurhashImage } from '@/components/ui/blurhash-image'
 
-const PRICE_SYMBOLS: Record<number, string> = { 0: 'Free', 1: '$', 2: '$$', 3: '$$$', 4: '$$$$' }
+const PRICE_SYMBOLS: Record<number, string> = { 0: '免費', 1: '$', 2: '$$', 3: '$$$', 4: '$$$$' }
 const SWIPE_THRESHOLD = 100
 
 interface SwipeCardProps {
@@ -47,15 +48,13 @@ export function SwipeCard({ restaurant, onSwipeLeft, onSwipeRight, isTop }: Swip
       {/* Card */}
       <div className="relative h-full w-full rounded-3xl overflow-hidden shadow-xl bg-card">
         {/* Hero image */}
-        <div className="absolute inset-0 bg-muted">
-          {restaurant.imageUrl && (
-            <img
-              src={restaurant.imageUrl}
-              alt={restaurant.name}
-              className="w-full h-full object-cover"
-              draggable={false}
-            />
-          )}
+        <div className="absolute inset-0">
+          <BlurhashImage
+            src={restaurant.imageUrl}
+            blurhash={restaurant.imageBlurhash}
+            alt={restaurant.name}
+            className="absolute inset-0"
+          />
           <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent" />
         </div>
 
@@ -87,7 +86,7 @@ export function SwipeCard({ restaurant, onSwipeLeft, onSwipeRight, isTop }: Swip
           </div>
 
           <div className="flex items-center gap-3 mb-3 text-sm">
-            <span className="bg-white/20 backdrop-blur-sm rounded-full px-3 py-1">{restaurant.cuisineLabel}</span>
+            <span className="bg-white/20 backdrop-blur-sm rounded-full px-3 py-1">{restaurant.typeLabel}</span>
             {restaurant.rating !== null && (
               <span className="flex items-center gap-1">
                 <Star className="w-3.5 h-3.5 fill-yellow-400 stroke-yellow-400" />
@@ -96,13 +95,15 @@ export function SwipeCard({ restaurant, onSwipeLeft, onSwipeRight, isTop }: Swip
             )}
           </div>
 
-          <div className="flex flex-wrap gap-1.5">
-            {restaurant.tags.slice(0, 4).map((tag) => (
-              <span key={tag} className="text-xs bg-white/15 backdrop-blur-sm rounded-full px-2.5 py-1">
-                {tag}
-              </span>
-            ))}
-          </div>
+          {restaurant.tags.length > 0 && (
+            <div className="flex flex-wrap gap-1.5">
+              {restaurant.tags.slice(0, 4).map((tag) => (
+                <span key={tag} className="text-xs bg-white/15 backdrop-blur-sm rounded-full px-2.5 py-1">
+                  {tag}
+                </span>
+              ))}
+            </div>
+          )}
         </div>
       </div>
     </motion.div>

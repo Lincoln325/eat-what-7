@@ -19,8 +19,11 @@ export async function ingestPlace(
     return { id: existing.id, name: existing.name, already_existed: true }
   }
 
-  const place = await fetchPlaceDetails(placeId)
-  const row = mapPlaceToRestaurantRow(place)
+  const [en, zh_hk] = await Promise.all([
+    fetchPlaceDetails(placeId, 'en'),
+    fetchPlaceDetails(placeId, 'zh-HK'),
+  ])
+  const row = mapPlaceToRestaurantRow({ en, zh_hk })
 
   // Image pipeline
   let imagePath: string | null = null
@@ -28,9 +31,9 @@ export async function ingestPlace(
   let imageWidth: number | null = null
   let imageHeight: number | null = null
 
-  if (place.photos?.[0]) {
+  if (en.photos?.[0]) {
     try {
-      const photoUrl = getPhotoUrl(place.photos[0].name)
+      const photoUrl = getPhotoUrl(en.photos[0].name)
       const processed = await processImage(photoUrl)
       imagePath = await uploadRestaurantImage(placeId, processed.buffer)
       blurhash = processed.blurhash

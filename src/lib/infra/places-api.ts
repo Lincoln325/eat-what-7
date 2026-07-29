@@ -7,7 +7,7 @@ const DETAILS_FIELD_MASK = [
   'id', 'displayName', 'formattedAddress', 'location',
   'priceLevel', 'rating', 'userRatingCount',
   'internationalPhoneNumber', 'websiteUri', 'businessStatus',
-  'types', 'primaryType', 'regularOpeningHours', 'photos', 'reviews',
+  'types', 'primaryType', 'primaryTypeDisplayName', 'regularOpeningHours', 'photos', 'reviews',
   'addressComponents', 'editorialSummary',
   'accessibilityOptions', 'delivery', 'dineIn', 'takeout',
   'reservable', 'servesBeer', 'servesBreakfast', 'servesBrunch',
@@ -53,13 +53,19 @@ async function findPlaceByText(query: string): Promise<string> {
   return placeId
 }
 
-export async function fetchPlaceDetails(placeId: string): Promise<PlaceDetails> {
-  const res = await fetch(`${PLACES_BASE}/places/${placeId}`, {
-    headers: {
-      'X-Goog-Api-Key': apiKey(),
-      'X-Goog-FieldMask': DETAILS_FIELD_MASK,
+export async function fetchPlaceDetails(
+  placeId: string,
+  languageCode = 'en',
+): Promise<PlaceDetails> {
+  const res = await fetch(
+    `${PLACES_BASE}/places/${placeId}?languageCode=${languageCode}`,
+    {
+      headers: {
+        'X-Goog-Api-Key': apiKey(),
+        'X-Goog-FieldMask': DETAILS_FIELD_MASK,
+      },
     },
-  })
+  )
   if (!res.ok) {
     const errBody = await res.json().catch(() => ({}))
     throw new Error(`Places API error: ${res.status} — ${errBody?.error?.message ?? ''}`)
