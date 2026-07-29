@@ -1,6 +1,10 @@
 import type { NextRequest } from 'next/server'
-import { getRestaurantById, deleteRestaurantById } from '@/lib/infra/restaurant-repo'
-import { purgePlaceImage } from '@/lib/services/ingest'
+import {
+  getRestaurantById,
+  deleteRestaurantById,
+  getPlaceIdById,
+} from '@/lib/infra/restaurant-repo'
+import { deleteRestaurantImage } from '@/lib/infra/storage'
 import { mapToRestaurantDetail } from '@/lib/domain/restaurant-detail'
 import type { RestaurantDetailSource } from '@/lib/domain/restaurant-detail'
 import { RESTAURANT_IMAGE_BASE_URL } from '@/lib/storage-url'
@@ -33,7 +37,17 @@ export async function DELETE(
 ) {
   const { id } = await params
   try {
-    await purgePlaceImage(id)
+    // Inline the storage cleanup here rather than importing from the ingest
+    // service — ingest pulls in sharp (native libvips), which must not be
+    // loaded by this read/delete-only route.
+    const placeId = await getPlaceIdById(id)
+    if (placeId) {
+      try {
+        await deleteRestaurantImage(placeId)
+      } catch {
+        // Missing image is fine — deleting the row is what matters.
+      }
+    }
     await deleteRestaurantById(id)
     return Response.json({ ok: true })
   } catch (err) {

@@ -2,7 +2,7 @@ import { mapPlaceToRestaurantRow } from '@/lib/domain/place-mapping'
 import { translateTags } from '@/lib/domain/tag-labels'
 import { fetchPlaceDetails, getPhotoUrl } from '@/lib/infra/places-api'
 import { processImage } from '@/lib/infra/image-pipeline'
-import { uploadRestaurantImage, deleteRestaurantImage } from '@/lib/infra/storage'
+import { uploadRestaurantImage } from '@/lib/infra/storage'
 import {
   findByPlaceId,
   insertRestaurant,
@@ -154,16 +154,4 @@ export async function refreshPlace(id: string): Promise<ConfirmResult> {
   delete (fields as Partial<typeof fields>).submitted_by
   const record = await updateRestaurantById(id, fields)
   return { id: record.id, name: record.name }
-}
-
-// Remove a saved place and its storage image.
-export async function purgePlaceImage(id: string): Promise<void> {
-  const placeId = await getPlaceIdById(id)
-  if (placeId) {
-    try {
-      await deleteRestaurantImage(placeId)
-    } catch {
-      // Missing image is fine — deletion of the row is what matters.
-    }
-  }
 }
