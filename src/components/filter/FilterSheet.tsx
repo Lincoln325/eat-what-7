@@ -1,6 +1,7 @@
 'use client'
 
-import { SlidersHorizontal } from 'lucide-react'
+import { motion } from 'framer-motion'
+import { SlidersHorizontal, Check } from 'lucide-react'
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger, SheetClose } from '@/components/ui/sheet'
 import { Button } from '@/components/ui/button'
 import { CUISINE_FILTERS } from '@/lib/domain/cuisine-mapping'
@@ -8,12 +9,23 @@ import { cn } from '@/lib/utils'
 
 const CUISINE_EMOJI: Record<string, string> = {
   chinese: '🥟',
-  japanese: '🍣',
+  dim_sum: '🥟',
+  hot_pot: '🍲',
+  japanese: '🍱',
+  sushi: '🍣',
+  ramen: '🍜',
   korean: '🥩',
-  western: '🍔',
+  bbq: '🍖',
   thai: '🌶️',
-  italian: '🍕',
+  vietnamese: '🍜',
+  western: '🍽️',
+  steakhouse: '🥩',
+  burgers: '🍔',
+  italian: '🍝',
+  pizza: '🍕',
   indian: '🍛',
+  seafood: '🦐',
+  dessert: '🍮',
 }
 
 interface FilterSheetProps {
@@ -29,7 +41,7 @@ export function FilterSheet({ activeFilters, onToggle, onClear }: FilterSheetPro
       <SheetTrigger
         render={
           <button
-            aria-label="Open filters"
+            aria-label="開啟篩選"
             className="relative w-10 h-10 rounded-full bg-card border border-border flex items-center justify-center shadow-sm active:scale-95 transition-transform cursor-pointer"
           />
         }
@@ -42,45 +54,63 @@ export function FilterSheet({ activeFilters, onToggle, onClear }: FilterSheetPro
         )}
       </SheetTrigger>
 
-      <SheetContent side="bottom" className="rounded-t-3xl pb-10 max-w-[430px] mx-auto left-0 right-0">
-        <SheetHeader className="mb-6">
-          <SheetTitle className="font-heading text-xl">Filter by Cuisine</SheetTitle>
+      <SheetContent
+        side="bottom"
+        showCloseButton={false}
+        className="rounded-t-3xl px-5 pb-8 pt-5 max-w-[430px] mx-auto left-0 right-0 overflow-y-auto max-h-[85vh]"
+      >
+        <SheetHeader className="p-0 mb-4">
+          <SheetTitle className="font-heading text-xl">篩選菜式</SheetTitle>
         </SheetHeader>
 
-        <div className="grid grid-cols-2 gap-3 mb-8">
-          {CUISINE_FILTERS.map(({ key, label }) => {
+        <div className="grid grid-cols-3 gap-2.5 mb-5">
+          {CUISINE_FILTERS.map(({ key, label }, i) => {
             const active = activeFilters.includes(key)
             return (
-              <button
+              <motion.button
                 key={key}
+                initial={{ opacity: 0, y: 18 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: i * 0.03, duration: 0.26 }}
+                whileTap={{ scale: 0.93 }}
                 onClick={() => onToggle(key)}
                 aria-pressed={active}
                 className={cn(
-                  'flex items-center gap-3 px-4 py-3 rounded-2xl border-2 text-sm font-medium transition-all active:scale-95 cursor-pointer',
+                  'relative flex flex-col items-center gap-1 px-2 py-3 rounded-xl border-2 text-xs font-medium transition-colors duration-150 cursor-pointer',
                   active
-                    ? 'bg-primary border-primary text-primary-foreground'
-                    : 'bg-card border-border text-foreground',
+                    ? 'bg-primary border-primary text-primary-foreground shadow-[0_8px_24px_rgba(255,107,43,0.35)]'
+                    : 'bg-card border-border text-foreground shadow-[0_1px_4px_rgba(0,0,0,0.06)]',
                 )}
               >
-                <span className="text-lg" aria-hidden>{CUISINE_EMOJI[key]}</span>
+                <span className="text-xl" aria-hidden>{CUISINE_EMOJI[key]}</span>
                 {label}
-              </button>
+                {active && (
+                  <motion.span
+                    initial={{ scale: 0 }}
+                    animate={{ scale: 1 }}
+                    transition={{ type: 'spring', stiffness: 420, damping: 18 }}
+                    className="absolute top-1.5 right-1.5 w-4 h-4 bg-primary-foreground rounded-full flex items-center justify-center"
+                  >
+                    <Check className="w-2.5 h-2.5 text-primary" strokeWidth={3} />
+                  </motion.span>
+                )}
+              </motion.button>
             )
           })}
         </div>
 
         <div className="flex gap-3">
           {activeFilters.length > 0 && (
-            <Button variant="outline" onClick={onClear} className="flex-1 rounded-2xl h-12">
-              Clear All
+            <Button variant="outline" onClick={onClear} className="flex-1 rounded-xl h-12">
+              清除全部
             </Button>
           )}
           <SheetClose
             render={
-              <Button className="flex-1 rounded-2xl h-12 bg-primary hover:bg-primary/90" />
+              <Button className="flex-1 rounded-xl h-12 bg-primary hover:bg-primary/90" />
             }
           >
-            Show Results
+            顯示結果
           </SheetClose>
         </div>
       </SheetContent>

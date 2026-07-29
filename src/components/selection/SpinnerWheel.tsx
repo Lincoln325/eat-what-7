@@ -3,13 +3,13 @@
 import { useRef, useState, useImperativeHandle, forwardRef } from 'react'
 import type { Restaurant } from '@/lib/types'
 
-const COLORS = ['#DC2626', '#A16207', '#15803d']
-const SIZE = 240
+const COLORS = ['#FF6B2B', '#FF9A5C', '#FFBA80', '#FFD0A8']
+const SIZE = 200
 const RADIUS = SIZE / 2
-const POINTER_OFFSET = 12
+const WHEEL_R = 86
 
 export interface SpinnerWheelHandle {
-  spin: () => Restaurant
+  spin: () => { restaurant: Restaurant; index: number }
 }
 
 interface SpinnerWheelProps {
@@ -28,7 +28,6 @@ function describeArc(cx: number, cy: number, r: number, startAngle: number, endA
 
 export const SpinnerWheel = forwardRef<SpinnerWheelHandle, SpinnerWheelProps>(
   function SpinnerWheel({ restaurants }, ref) {
-    const wheelRef = useRef<SVGGElement>(null)
     const [rotation, setRotation] = useState(0)
     const [isSpinning, setIsSpinning] = useState(false)
 
@@ -37,14 +36,20 @@ export const SpinnerWheel = forwardRef<SpinnerWheelHandle, SpinnerWheelProps>(
 
     useImperativeHandle(ref, () => ({
       spin() {
-        if (isSpinning || count === 0) return restaurants[0]
+        if (isSpinning || count === 0) return { restaurant: restaurants[0], index: 0 }
 
         setIsSpinning(true)
-        const extraSpins = 1440 + Math.floor(Math.random() * 720)
         const winnerIndex = Math.floor(Math.random() * count)
-        // Place winner at top (270deg = 12 o'clock in SVG coords, adjusted for sector center)
-        const winnerOffset = 270 - (winnerIndex * sectorAngle + sectorAngle / 2)
-        const targetRotation = rotation + extraSpins + ((winnerOffset - (rotation % 360) + 360) % 360)
+
+        // Sectors are drawn starting at -90° (top) going clockwise, so sector i's
+        // center sits at angle (-90 + (i + 0.5)*sectorAngle) in the wheel's own frame.
+        // The pointer is at the top (-90° / 270°). To bring the winner's center under
+        // the pointer we rotate the wheel by -(sectorCenter - (-90)) = -(i+0.5)*sectorAngle.
+        const sectorCenter = (winnerIndex + 0.5) * sectorAngle
+        // Normalise the current rotation, then add whole turns + the delta to align.
+        const current = rotation % 360
+        const alignDelta = ((-sectorCenter - current) % 360 + 360) % 360
+        const targetRotation = rotation + 360 * 5 + alignDelta
 
         setRotation(targetRotation)
 
@@ -52,44 +57,44 @@ export const SpinnerWheel = forwardRef<SpinnerWheelHandle, SpinnerWheelProps>(
           setIsSpinning(false)
         }, 4200)
 
-        return restaurants[winnerIndex]
+        return { restaurant: restaurants[winnerIndex], index: winnerIndex }
       },
     }))
 
     return (
-      <div className="relative flex items-center justify-center" style={{ width: SIZE + POINTER_OFFSET * 2, height: SIZE + POINTER_OFFSET * 2 }}>
+      <div className="relative w-52 h-52 mx-auto">
         {/* Pointer */}
         <div
-          className="absolute top-0 left-1/2 -translate-x-1/2 z-10"
-          style={{ marginTop: -2 }}
-        >
-          <div className="w-0 h-0 border-l-[10px] border-r-[10px] border-t-[20px] border-l-transparent border-r-transparent border-t-foreground drop-shadow-md" />
-        </div>
+          className="absolute -top-2 left-1/2 -translate-x-1/2 z-10 w-0 h-0 border-l-[9px] border-r-[9px] border-t-[18px] border-l-transparent border-r-transparent border-t-foreground"
+          style={{ filter: 'drop-shadow(0 2px 5px rgba(0,0,0,0.3))' }}
+        />
 
-        <svg width={SIZE} height={SIZE} viewBox={`0 0 ${SIZE} ${SIZE}`}>
+        <svg width="100%" height="100%" viewBox={`0 0 ${SIZE} ${SIZE}`} className="drop-shadow-xl">
           <g
-            ref={wheelRef}
             style={{
               transformOrigin: `${RADIUS}px ${RADIUS}px`,
               transform: `rotate(${rotation}deg)`,
               transition: isSpinning ? 'transform 4s cubic-bezier(0.17, 0.67, 0.12, 0.99)' : 'none',
             }}
           >
+            {/* Outer ring */}
+            <circle cx={RADIUS} cy={RADIUS} r={WHEEL_R + 5} fill="#FFF3EE" />
+
             {restaurants.map((restaurant, i) => {
               const startAngle = i * sectorAngle - 90
               const endAngle = startAngle + sectorAngle
               const midAngle = ((startAngle + endAngle) / 2) * (Math.PI / 180)
-              const labelR = RADIUS * 0.62
+              const labelR = WHEEL_R * 0.57
               const lx = RADIUS + labelR * Math.cos(midAngle)
               const ly = RADIUS + labelR * Math.sin(midAngle)
 
               return (
                 <g key={restaurant.id}>
                   <path
-                    d={describeArc(RADIUS, RADIUS, RADIUS - 2, startAngle, endAngle)}
+                    d={describeArc(RADIUS, RADIUS, WHEEL_R, startAngle, endAngle)}
                     fill={COLORS[i % COLORS.length]}
                     stroke="white"
-                    strokeWidth={2}
+                    strokeWidth={2.5}
                   />
                   <text
                     x={lx}
@@ -97,20 +102,20 @@ export const SpinnerWheel = forwardRef<SpinnerWheelHandle, SpinnerWheelProps>(
                     textAnchor="middle"
                     dominantBaseline="middle"
                     fill="white"
-                    fontSize={count === 1 ? 14 : count === 2 ? 12 : 10}
-                    fontWeight="bold"
-                    className="font-heading"
+                    fontSize={20}
+                    fontWeight={800}
                     style={{ pointerEvents: 'none' }}
                   >
-                    {restaurant.name.length > 10 ? restaurant.name.slice(0, 9) + '…' : restaurant.name}
+                    {i + 1}
                   </text>
                 </g>
               )
             })}
-          </g>
 
-          {/* Center cap */}
-          <circle cx={RADIUS} cy={RADIUS} r={16} fill="white" stroke="#e5e7eb" strokeWidth={2} />
+            {/* Hub */}
+            <circle cx={RADIUS} cy={RADIUS} r={17} fill="#1C1C1E" />
+            <circle cx={RADIUS} cy={RADIUS} r={9} fill="#FF6B2B" />
+          </g>
         </svg>
       </div>
     )

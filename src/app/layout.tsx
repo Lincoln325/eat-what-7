@@ -1,24 +1,24 @@
 import type { Metadata, Viewport } from 'next'
-import { Karla, Playfair_Display_SC } from 'next/font/google'
+import { Plus_Jakarta_Sans, Playfair_Display } from 'next/font/google'
 import './globals.css'
 
-const karla = Karla({
+const jakarta = Plus_Jakarta_Sans({
   subsets: ['latin'],
-  weight: ['300', '400', '500', '600', '700'],
+  weight: ['400', '500', '600', '700', '800'],
   variable: '--font-sans',
   display: 'swap',
 })
 
-const playfair = Playfair_Display_SC({
+const playfair = Playfair_Display({
   subsets: ['latin'],
-  weight: ['400', '700'],
+  weight: ['700', '900'],
   variable: '--font-heading',
   display: 'swap',
 })
 
 export const metadata: Metadata = {
-  title: 'EatWhat',
-  description: 'Swipe to decide where to eat',
+  title: '食乜7',
+  description: 'Swipe 揀今餐食乜',
 }
 
 export const viewport: Viewport = {
@@ -29,7 +29,7 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={`${karla.variable} ${playfair.variable}`}>
+    <html lang="zh-HK" className={`${jakarta.variable} ${playfair.variable}`}>
       <body className="bg-background text-foreground font-sans antialiased">
         {children}
       </body>
