@@ -6,9 +6,12 @@ import { useRestaurants } from '@/hooks/useRestaurants'
 import { useSwipeDeck } from '@/hooks/useSwipeDeck'
 import { useSelection } from '@/hooks/useSelection'
 import { AnimatePresence, motion } from 'framer-motion'
+import { useSWRConfig } from 'swr'
 import { SwipeDeck } from '@/components/swipe/SwipeDeck'
 import { ActionBar } from '@/components/swipe/ActionBar'
 import { FilterSheet } from '@/components/filter/FilterSheet'
+import { AddRestaurantSheet } from '@/components/add/AddRestaurantSheet'
+import { RestaurantDetailSheet } from '@/components/detail/RestaurantDetailSheet'
 import { SelectionView } from '@/components/selection/SelectionView'
 import { SwipeProgress } from '@/components/swipe/SwipeProgress'
 import { MAX_SELECTION } from '@/hooks/useSelection'
@@ -26,10 +29,28 @@ const PREFETCH_THRESHOLD = 5
 
 export function AppShell() {
   const [view, setView] = useState<AppView>('swipe')
+  const [detailOpen, setDetailOpen] = useState(false)
+  const { mutate } = useSWRConfig()
   const { activeFilters, toggleFilter, clearFilters } = useFilter()
   const { restaurants, isLoading, isReachingEnd, loadMore } = useRestaurants(activeFilters)
   const { currentCard, nextCard, isExhausted, remainingCount, advance, reset } = useSwipeDeck(restaurants)
   const { selected, addToSelection, removeFromSelection, clearSelection } = useSelection()
+
+  // Revalidate the restaurant list (all filter variants) after a data change.
+  function revalidateList() {
+    mutate((key) => Array.isArray(key) && key[0] === 'restaurants', undefined, { revalidate: true })
+  }
+
+  function handleOpenMap() {
+    if (currentCard?.googleMapsUri) {
+      window.open(currentCard.googleMapsUri, '_blank', 'noopener,noreferrer')
+    }
+  }
+
+  function handleDeleted() {
+    advance()
+    revalidateList()
+  }
 
   // Reset deck when filters change
   useEffect(() => {
@@ -56,14 +77,6 @@ export function AppShell() {
     advance()
   }
 
-  function handleLike() {
-    handleSwipeRight()
-  }
-
-  function handleSkip() {
-    handleSwipeLeft()
-  }
-
   return (
     <div className="flex flex-col h-dvh max-w-[430px] mx-auto bg-background overflow-hidden">
       <AnimatePresence mode="wait" custom={view === 'swipe' ? -1 : 1} initial={false}>
@@ -83,11 +96,14 @@ export function AppShell() {
               <h1 className="text-2xl font-extrabold text-foreground tracking-tight">
                 食乜<span className="text-primary">7</span>
               </h1>
-              <FilterSheet
-                activeFilters={activeFilters}
-                onToggle={toggleFilter}
-                onClear={clearFilters}
-              />
+              <div className="flex items-center gap-2">
+                <AddRestaurantSheet onAdded={revalidateList} />
+                <FilterSheet
+                  activeFilters={activeFilters}
+                  onToggle={toggleFilter}
+                  onClear={clearFilters}
+                />
+              </div>
             </header>
 
             {/* Session goal — save 3, then decide */}
@@ -112,8 +128,12 @@ export function AppShell() {
             <div className="py-6 pb-safe-bottom">
               <ActionBar
                 selectionCount={selected.length}
-                onSkip={handleSkip}
-                onLike={handleLike}
+                hasCard={!!currentCard}
+                hasMap={!!currentCard?.googleMapsUri}
+                onOpenDetail={() => {
+                  if (currentCard) setDetailOpen(true)
+                }}
+                onOpenMap={handleOpenMap}
                 onOpenSelection={() => {
                   if (selected.length > 0) setView('selection')
                 }}
@@ -143,6 +163,13 @@ export function AppShell() {
           </motion.div>
         )}
       </AnimatePresence>
+
+      <RestaurantDetailSheet
+        restaurantId={currentCard?.id ?? null}
+        open={detailOpen}
+        onOpenChange={setDetailOpen}
+        onDeleted={handleDeleted}
+      />
     </div>
   )
 }

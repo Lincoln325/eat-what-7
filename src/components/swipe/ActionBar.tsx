@@ -1,28 +1,38 @@
 'use client'
 
 import { motion } from 'framer-motion'
-import { X, Heart } from 'lucide-react'
+import { Info, Navigation } from 'lucide-react'
 import { MAX_SELECTION } from '@/hooks/useSelection'
 
 interface ActionBarProps {
   selectionCount: number
-  onSkip: () => void
-  onLike: () => void
+  hasCard: boolean
+  hasMap: boolean
+  onOpenDetail: () => void
+  onOpenMap: () => void
   onOpenSelection: () => void
 }
 
-export function ActionBar({ selectionCount, onSkip, onLike, onOpenSelection }: ActionBarProps) {
+export function ActionBar({
+  selectionCount,
+  hasCard,
+  hasMap,
+  onOpenDetail,
+  onOpenMap,
+  onOpenSelection,
+}: ActionBarProps) {
   return (
     <div className="flex items-center justify-between px-8">
-      {/* Skip */}
+      {/* Details — current card */}
       <motion.button
-        whileTap={{ scale: 0.88 }}
+        whileTap={hasCard ? { scale: 0.88 } : {}}
         transition={{ type: 'spring', stiffness: 400, damping: 20 }}
-        onClick={onSkip}
-        aria-label="跳過呢間餐廳"
-        className="w-14 h-14 rounded-full border-2 border-border bg-card flex items-center justify-center shadow-md cursor-pointer"
+        onClick={onOpenDetail}
+        disabled={!hasCard}
+        aria-label="餐廳詳情"
+        className="w-14 h-14 rounded-full border-2 border-border bg-card flex items-center justify-center shadow-md cursor-pointer transition-opacity disabled:opacity-40 disabled:cursor-default"
       >
-        <X className="w-6 h-6 text-muted-foreground" />
+        <Info className="w-6 h-6 text-muted-foreground" />
       </motion.button>
 
       {/* Selection badge */}
@@ -45,15 +55,16 @@ export function ActionBar({ selectionCount, onSkip, onLike, onOpenSelection }: A
         <span className="text-[10px] text-muted-foreground font-medium">我嘅心水</span>
       </motion.button>
 
-      {/* Like */}
+      {/* Map — current card */}
       <motion.button
-        whileTap={{ scale: 0.88 }}
+        whileTap={hasMap ? { scale: 0.88 } : {}}
         transition={{ type: 'spring', stiffness: 400, damping: 20 }}
-        onClick={onLike}
-        aria-label="心水呢間餐廳"
-        className="w-14 h-14 rounded-full bg-primary flex items-center justify-center shadow-md cursor-pointer"
+        onClick={onOpenMap}
+        disabled={!hasMap}
+        aria-label="喺地圖查看"
+        className="w-14 h-14 rounded-full bg-primary flex items-center justify-center shadow-md cursor-pointer transition-opacity disabled:opacity-40 disabled:cursor-default"
       >
-        <Heart className="w-6 h-6 text-primary-foreground fill-primary-foreground" />
+        <Navigation className="w-6 h-6 text-primary-foreground fill-primary-foreground" />
       </motion.button>
     </div>
   )

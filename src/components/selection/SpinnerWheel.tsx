@@ -1,6 +1,6 @@
 'use client'
 
-import { useRef, useState, useImperativeHandle, forwardRef } from 'react'
+import { useState, useImperativeHandle, forwardRef } from 'react'
 import type { Restaurant } from '@/lib/types'
 
 const COLORS = ['#FF6B2B', '#FF9A5C', '#FFBA80', '#FFD0A8']
