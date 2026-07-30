@@ -4,12 +4,23 @@ import { RESTAURANT_IMAGE_BASE_URL } from '@/lib/storage-url'
 
 export const PAGE_SIZE = 20
 
+export interface Coords {
+  lat: number
+  lng: number
+}
+
 export async function fetchRestaurantsPage(
   cuisineKeys: string[],
   offset: number,
+  seed: string,
+  coords: Coords | null,
 ): Promise<Restaurant[]> {
-  const params = new URLSearchParams({ offset: String(offset), limit: String(PAGE_SIZE) })
+  const params = new URLSearchParams({ offset: String(offset), limit: String(PAGE_SIZE), seed })
   if (cuisineKeys.length > 0) params.set('cuisine', cuisineKeys.join(','))
+  if (coords) {
+    params.set('lat', String(coords.lat))
+    params.set('lng', String(coords.lng))
+  }
 
   const res = await fetch(`/api/restaurants?${params}`)
   if (!res.ok) throw new Error(`Failed to fetch restaurants: ${res.status}`)

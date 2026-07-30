@@ -77,15 +77,17 @@ export function SwipeDeck({
         </div>
       )}
 
-      {/* Top card */}
+      {/* Top card — promotes from the background card's resting transform
+          (scale .95, y+16) so it slides into place instead of fading in over
+          its own duplicate in the background layer (which caused a flick). */}
       <AnimatePresence>
         {currentCard && (
           <motion.div
             key={currentCard.id}
             className="absolute inset-0"
-            initial={{ scale: 0.94, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            transition={{ duration: 0.24, ease: 'easeOut' }}
+            initial={{ scale: 0.95, y: 16 }}
+            animate={{ scale: 1, y: 0 }}
+            transition={{ duration: 0.2, ease: 'easeOut' }}
           >
             <SwipeCard
               restaurant={currentCard}

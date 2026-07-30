@@ -26,30 +26,39 @@ export interface ListRestaurantsOptions {
   cuisineKeys?: string[]
   offset?: number
   limit?: number
+  // Per-session shuffle seed — keeps pagination consistent (no dups/skips)
+  // while giving a different order each visit. See list_restaurants RPC.
+  seed?: string
+  // When both provided, results are proximity-weighted toward this point.
+  userLat?: number
+  userLng?: number
 }
 
-// Public read: filters by cuisine using primaryType (strong signal) with a
-// tags fallback, since Google sometimes returns a generic primaryType even
-// when a specific type is present in tags. See domain/cuisine-mapping.ts.
+// Public read via the list_restaurants RPC (seeded shuffle + optional proximity
+// weighting). Cuisine filtering matches primaryType (strong signal) with a tags
+// fallback, since Google sometimes returns a generic primaryType even when a
+// specific type is present in tags. See domain/cuisine-mapping.ts and the RPC.
 export async function listRestaurants(
   options: ListRestaurantsOptions = {},
 ): Promise<RestaurantListItem[]> {
-  const { cuisineKeys, offset = 0, limit = 20 } = options
+  const { cuisineKeys, offset = 0, limit = 20, seed = '', userLat, userLng } = options
 
-  let query = supabase
-    .from('restaurants')
-    .select('id, name, name_zh, primary_type, primary_type_display_name_zh, tags, rating, price_level, primary_image_path, image_blurhash, google_maps_uri, region')
-    .range(offset, offset + limit - 1)
+  const googleTypes =
+    cuisineKeys && cuisineKeys.length > 0
+      ? cuisineKeys.flatMap(getGoogleTypesForCuisineKey)
+      : null
 
-  if (cuisineKeys && cuisineKeys.length > 0) {
-    const googleTypes = cuisineKeys.flatMap(getGoogleTypesForCuisineKey)
-    const tagsList = `{${googleTypes.join(',')}}`
-    query = query.or(`primary_type.in.(${googleTypes.join(',')}),tags.ov.${tagsList}`)
-  }
+  const { data, error } = await supabase.rpc('list_restaurants', {
+    cuisine_types: googleTypes,
+    seed,
+    user_lat: userLat ?? null,
+    user_lng: userLng ?? null,
+    result_offset: offset,
+    result_limit: limit,
+  })
 
-  const { data, error } = await query
   if (error) throw new Error(`DB query failed: ${error.message}`)
-  return data ?? []
+  return (data as RestaurantListItem[] | null) ?? []
 }
 
 export async function findByPlaceId(placeId: string): Promise<RestaurantRecord | null> {

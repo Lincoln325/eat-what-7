@@ -5,12 +5,14 @@ import { useFilter } from '@/hooks/useFilter'
 import { useRestaurants } from '@/hooks/useRestaurants'
 import { useSwipeDeck } from '@/hooks/useSwipeDeck'
 import { useSelection } from '@/hooks/useSelection'
+import { useGeolocation } from '@/hooks/useGeolocation'
 import { AnimatePresence, motion } from 'framer-motion'
 import { useSWRConfig } from 'swr'
 import { SwipeDeck } from '@/components/swipe/SwipeDeck'
 import { ActionBar } from '@/components/swipe/ActionBar'
 import { FilterSheet } from '@/components/filter/FilterSheet'
 import { AddRestaurantSheet } from '@/components/add/AddRestaurantSheet'
+import { LocationToggle } from '@/components/swipe/LocationToggle'
 import { RestaurantDetailSheet } from '@/components/detail/RestaurantDetailSheet'
 import { SelectionView } from '@/components/selection/SelectionView'
 import { SwipeProgress } from '@/components/swipe/SwipeProgress'
@@ -32,7 +34,15 @@ export function AppShell() {
   const [detailOpen, setDetailOpen] = useState(false)
   const { mutate } = useSWRConfig()
   const { activeFilters, toggleFilter, clearFilters } = useFilter()
-  const { restaurants, isLoading, isReachingEnd, loadMore } = useRestaurants(activeFilters)
+  // One shuffle seed per session — keeps pagination stable (no dups/skips)
+  // while giving a fresh order each visit. Lazy initializer runs once on mount.
+  const [seed] = useState(() => Math.random().toString(36).slice(2))
+  const { coords, isOn: locationOn, status: locStatus, enable, disable } = useGeolocation()
+  const { restaurants, isLoading, isReachingEnd, loadMore } = useRestaurants(
+    activeFilters,
+    seed,
+    coords,
+  )
   const { currentCard, nextCard, isExhausted, remainingCount, advance, reset } = useSwipeDeck(restaurants)
   const { selected, addToSelection, removeFromSelection, clearSelection } = useSelection()
 
@@ -52,11 +62,17 @@ export function AppShell() {
     revalidateList()
   }
 
-  // Reset deck when filters change
+  // Reset deck when filters change, or when location weighting toggles (both
+  // reorder the list, so we want to start from the top of the new order).
   useEffect(() => {
     reset()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeFilters.join(',')])
+  }, [activeFilters.join(','), locationOn])
+
+  function handleToggleLocation() {
+    if (locationOn) disable()
+    else enable()
+  }
 
   // Prefetch the next page before the deck actually runs dry
   useEffect(() => {
@@ -102,6 +118,11 @@ export function AppShell() {
                   activeFilters={activeFilters}
                   onToggle={toggleFilter}
                   onClear={clearFilters}
+                />
+                <LocationToggle
+                  isOn={locationOn}
+                  isLocating={locStatus === 'locating'}
+                  onToggle={handleToggleLocation}
                 />
               </div>
             </header>
