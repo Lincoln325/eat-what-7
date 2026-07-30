@@ -1,5 +1,6 @@
 import type { NextRequest } from 'next/server'
 import { searchForAdd } from '@/lib/services/place-search'
+import { hasValidSession } from '@/lib/auth/require-session'
 
 // POST /api/restaurants/search  { query }
 // query is a name or a pasted Google Maps URL. Returns up to 5 selectable
@@ -7,6 +8,10 @@ import { searchForAdd } from '@/lib/services/place-search'
 // Search call + ≤5 photo lookups. No details fetch, no image processing, no
 // sharp — so this route stays light and deploys clean.
 export async function POST(request: NextRequest) {
+  if (!(await hasValidSession())) {
+    return Response.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
   const body = await request.json().catch(() => null)
   if (!body?.query || typeof body.query !== 'string') {
     return Response.json({ error: 'query is required' }, { status: 400 })

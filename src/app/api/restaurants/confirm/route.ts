@@ -1,5 +1,6 @@
 import type { NextRequest } from 'next/server'
 import { ingestPlace } from '@/lib/services/ingest'
+import { hasValidSession } from '@/lib/auth/require-session'
 
 // POST /api/restaurants/confirm  { placeIds: string[] }
 // Adds the place ids the user selected from the search results. This is where
@@ -7,6 +8,10 @@ import { ingestPlace } from '@/lib/services/ingest'
 // processing + insert. Imports sharp (via ingest), so it's one of the routes
 // force-bundled with the linux binaries in next.config.ts.
 export async function POST(request: NextRequest) {
+  if (!(await hasValidSession())) {
+    return Response.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
   const body = await request.json().catch(() => null)
   const placeIds = body?.placeIds
   if (!Array.isArray(placeIds) || placeIds.length === 0) {

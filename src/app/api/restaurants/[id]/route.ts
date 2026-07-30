@@ -8,6 +8,7 @@ import { deleteRestaurantImage } from '@/lib/infra/storage'
 import { mapToRestaurantDetail } from '@/lib/domain/restaurant-detail'
 import type { RestaurantDetailSource } from '@/lib/domain/restaurant-detail'
 import { RESTAURANT_IMAGE_BASE_URL } from '@/lib/storage-url'
+import { hasValidSession } from '@/lib/auth/require-session'
 
 // GET /api/restaurants/[id] — full detail from cached data (no Google call)
 export async function GET(
@@ -35,6 +36,10 @@ export async function DELETE(
   _request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
+  if (!(await hasValidSession())) {
+    return Response.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
   const { id } = await params
   try {
     // Inline the storage cleanup here rather than importing from the ingest
