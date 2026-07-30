@@ -21,6 +21,10 @@ const zhDetails: PlaceDetails = {
   id: 'ChIJabc123',
   displayName: { text: '測試餐廳', languageCode: 'zh-HK' },
   primaryTypeDisplayName: { text: '日本餐廳', languageCode: 'zh-HK' },
+  addressComponents: [
+    { longText: '銅鑼灣', shortText: '銅鑼灣', types: ['neighborhood', 'political'] },
+    { longText: '香港島', shortText: '香港島', types: ['administrative_area_level_1', 'political'] },
+  ],
 }
 
 describe('mapPriceLevelToInt', () => {
@@ -56,6 +60,7 @@ describe('mapPlaceToRestaurantRow', () => {
     expect(row.primary_type).toBe('japanese_restaurant')
     expect(row.primary_type_display_name_zh).toBe('日本餐廳')
     expect(row.google_maps_uri).toBe('https://maps.google.com/?cid=12345')
+    expect(row.region).toBe('銅鑼灣')
     expect(row.raw_place_data).toEqual({ en: enDetails, zh_hk: zhDetails })
   })
 

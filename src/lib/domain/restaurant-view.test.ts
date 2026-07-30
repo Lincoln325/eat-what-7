@@ -12,6 +12,7 @@ const baseRow: RestaurantSource = {
   primary_image_path: 'abc123/primary.webp',
   image_blurhash: 'L9D9FvRO4:%2T}4.Mxo#0L$K%f%g',
   google_maps_uri: 'https://maps.google.com/?cid=123',
+  region: '銅鑼灣',
 }
 
 describe('mapToRestaurant', () => {
@@ -26,6 +27,7 @@ describe('mapToRestaurant', () => {
     expect(result.priceLevel).toBe(2)
     expect(result.tags).toEqual(expect.arrayContaining(['壽司', '日本菜']))
     expect(result.googleMapsUri).toBe('https://maps.google.com/?cid=123')
+    expect(result.region).toBe('銅鑼灣')
   })
 
   it('falls back to English name when name_zh is missing', () => {

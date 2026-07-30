@@ -15,9 +15,9 @@ const SHARP_LINUX_BINARIES = [
 
 const nextConfig: NextConfig = {
   outputFileTracingIncludes: {
-    "/api/restaurants/preview": SHARP_LINUX_BINARIES,
+    // Routes that process images (import sharp). /search is deliberately NOT
+    // here — it does no image processing.
     "/api/restaurants/confirm": SHARP_LINUX_BINARIES,
-    "/api/restaurants/ingest": SHARP_LINUX_BINARIES,
     "/api/restaurants/batch": SHARP_LINUX_BINARIES,
     "/api/restaurants/[id]/refresh": SHARP_LINUX_BINARIES,
   },

@@ -3,7 +3,7 @@
 import { useRef } from 'react'
 import { motion, useMotionValue, useTransform, animate } from 'framer-motion'
 import type { Restaurant } from '@/lib/types'
-import { Star } from 'lucide-react'
+import { Star, MapPin } from 'lucide-react'
 import { BlurhashImage } from '@/components/ui/blurhash-image'
 
 const PRICE_SYMBOLS: Record<number, string> = { 0: '免費', 1: '$', 2: '$$', 3: '$$$', 4: '$$$$' }
@@ -91,6 +91,12 @@ export function SwipeCard({ restaurant, onSwipeLeft, onSwipeRight, isTop }: Swip
               <span className="flex items-center gap-1">
                 <Star className="w-3.5 h-3.5 fill-yellow-400 stroke-yellow-400" />
                 {restaurant.rating}
+              </span>
+            )}
+            {restaurant.region && (
+              <span className="flex items-center gap-1 opacity-90">
+                <MapPin className="w-3.5 h-3.5" />
+                {restaurant.region}
               </span>
             )}
           </div>

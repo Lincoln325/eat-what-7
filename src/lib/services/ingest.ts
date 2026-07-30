@@ -1,5 +1,4 @@
 import { mapPlaceToRestaurantRow } from '@/lib/domain/place-mapping'
-import { translateTags } from '@/lib/domain/tag-labels'
 import { fetchPlaceDetails, getPhotoUrl } from '@/lib/infra/places-api'
 import { processImage } from '@/lib/infra/image-pipeline'
 import { uploadRestaurantImage } from '@/lib/infra/storage'
@@ -10,16 +9,6 @@ import {
   getPlaceIdById,
   type InsertRestaurantInput,
 } from '@/lib/infra/restaurant-repo'
-import { RESTAURANT_IMAGE_BASE_URL } from '@/lib/storage-url'
-import type { PlacePreview } from '@/lib/types'
-
-// Bundles the display preview shown to the user with the fully-built insert
-// payload. The payload is opaque to the client and handed back to confirmPlace
-// verbatim, so Google is called exactly once (during preview).
-export interface PreviewResult {
-  preview: PlacePreview
-  payload: InsertRestaurantInput | null
-}
 
 // Build the DB record (details + image pipeline) for a place WITHOUT inserting.
 // Returns null payload when the place already exists.
@@ -58,68 +47,9 @@ async function buildRecord(placeId: string): Promise<InsertRestaurantInput> {
   }
 }
 
-// Step 1: resolve + fetch + build (image uploaded, keyed by placeId with
-// upsert). Nothing is written to the restaurants table yet.
-export async function previewPlace(placeId: string): Promise<PreviewResult> {
-  const existing = await findByPlaceId(placeId)
-  if (existing) {
-    // Cheap display-only fetch so the user sees which place they pasted.
-    const en = await fetchPlaceDetails(placeId, 'en')
-    return {
-      preview: {
-        name: en.displayName?.text ?? existing.name,
-        typeLabel: en.primaryTypeDisplayName?.text ?? '餐廳',
-        imageUrl: null,
-        rating: en.rating ?? null,
-        ratingCount: en.userRatingCount ?? null,
-        priceLevel: null,
-        address: en.formattedAddress ?? null,
-        tags: translateTags(en.types ?? []),
-        alreadyExists: true,
-        existingId: existing.id,
-        placeId,
-      },
-      payload: null,
-    }
-  }
-
-  const payload = await buildRecord(placeId)
-  const imageUrl = payload.primary_image_path
-    ? `${RESTAURANT_IMAGE_BASE_URL}/${payload.primary_image_path}`
-    : null
-
-  return {
-    preview: {
-      name: payload.name_zh ?? payload.name,
-      typeLabel: payload.primary_type_display_name_zh ?? '餐廳',
-      imageUrl,
-      rating: payload.rating,
-      ratingCount: payload.total_ratings,
-      priceLevel: payload.price_level,
-      address: payload.address,
-      tags: translateTags(payload.tags),
-      alreadyExists: false,
-      existingId: null,
-      placeId,
-    },
-    payload,
-  }
-}
-
 export interface ConfirmResult {
   id: string
   name: string
-}
-
-// Step 2: insert the record built during preview. No Google call.
-export async function confirmPlace(
-  payload: InsertRestaurantInput,
-): Promise<ConfirmResult> {
-  const existing = await findByPlaceId(payload.google_place_id)
-  if (existing) return { id: existing.id, name: existing.name }
-
-  const record = await insertRestaurant(payload)
-  return { id: record.id, name: record.name }
 }
 
 export interface IngestResult {
@@ -128,9 +58,9 @@ export interface IngestResult {
   already_existed: boolean
 }
 
-// One-shot ingest (build + insert) used by the batch importer and the legacy
-// single-URL route. The interactive Add flow uses previewPlace/confirmPlace
-// instead so the user can review before committing.
+// One-shot ingest (build + insert): fetch bilingual details, process + upload
+// the image, insert. Used by the batch importer and by the interactive Add
+// flow once the user has picked a place from the search results.
 export async function ingestPlace(placeId: string): Promise<IngestResult> {
   const existing = await findByPlaceId(placeId)
   if (existing) {

@@ -1,4 +1,4 @@
-import type { Restaurant, RestaurantDetail, PlacePreview } from '@/lib/types'
+import type { Restaurant, RestaurantDetail, PlaceSearchResult } from '@/lib/types'
 import { mapToRestaurant, type RestaurantSource } from '@/lib/domain/restaurant-view'
 import { RESTAURANT_IMAGE_BASE_URL } from '@/lib/storage-url'
 
@@ -40,27 +40,40 @@ export async function refreshRestaurant(id: string): Promise<void> {
   if (!res.ok) await asError(res, `Failed to refresh: ${res.status}`)
 }
 
-// The payload is opaque to the client — handed straight back to confirm.
-export interface PreviewResponse {
-  preview: PlacePreview
-  payload: unknown
-}
-
-export async function previewRestaurant(url: string): Promise<PreviewResponse> {
-  const res = await fetch('/api/restaurants/preview', {
+// Search for places to add — a name or a pasted Maps URL. Returns up to 5
+// selectable candidates. Cheap: no details/image work happens here.
+export async function searchPlaces(query: string): Promise<PlaceSearchResult[]> {
+  const res = await fetch('/api/restaurants/search', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ url }),
+    body: JSON.stringify({ query }),
   })
-  if (!res.ok) return asError(res, `Failed to preview: ${res.status}`)
-  return res.json()
+  if (!res.ok) return asError(res, `Failed to search: ${res.status}`)
+  const { results }: { results: PlaceSearchResult[] } = await res.json()
+  return results
 }
 
-export async function confirmRestaurant(payload: unknown): Promise<{ id: string; name: string }> {
+export interface AddResult {
+  placeId: string
+  ok: boolean
+  name?: string
+  alreadyExisted?: boolean
+  error?: string
+}
+
+export interface AddResponse {
+  added: number
+  failed: number
+  results: AddResult[]
+}
+
+// Add the selected place ids. This is the expensive step (details + image
+// processing + insert per place, server-side).
+export async function addRestaurants(placeIds: string[]): Promise<AddResponse> {
   const res = await fetch('/api/restaurants/confirm', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ payload }),
+    body: JSON.stringify({ placeIds }),
   })
   if (!res.ok) return asError(res, `Failed to add: ${res.status}`)
   return res.json()

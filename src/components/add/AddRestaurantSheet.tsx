@@ -2,14 +2,13 @@
 
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Plus, Star, MapPin, ArrowLeft, RefreshCw, Check, AlertCircle } from 'lucide-react'
-import type { PlacePreview } from '@/lib/types'
-import { previewRestaurant, confirmRestaurant } from '@/lib/api/restaurants-client'
+import { Plus, Search, MapPin, RefreshCw, Check, AlertCircle } from 'lucide-react'
+import type { PlaceSearchResult } from '@/lib/types'
+import { searchPlaces, addRestaurants } from '@/lib/api/restaurants-client'
 import { Sheet, SheetContent, SheetTitle, SheetTrigger } from '@/components/ui/sheet'
 import { Button } from '@/components/ui/button'
 import { BlurhashImage } from '@/components/ui/blurhash-image'
-
-const PRICE_SYMBOLS: Record<number, string> = { 0: '免費', 1: '$', 2: '$$', 3: '$$$', 4: '$$$$' }
+import { cn } from '@/lib/utils'
 
 interface AddRestaurantSheetProps {
   onAdded: () => void
@@ -17,21 +16,21 @@ interface AddRestaurantSheetProps {
 
 export function AddRestaurantSheet({ onAdded }: AddRestaurantSheetProps) {
   const [open, setOpen] = useState(false)
-  const [url, setUrl] = useState('')
-  const [preview, setPreview] = useState<PlacePreview | null>(null)
-  const [payload, setPayload] = useState<unknown>(null)
-  const [isPreviewing, setIsPreviewing] = useState(false)
-  const [isConfirming, setIsConfirming] = useState(false)
-  const [done, setDone] = useState(false)
+  const [query, setQuery] = useState('')
+  const [results, setResults] = useState<PlaceSearchResult[] | null>(null)
+  const [selected, setSelected] = useState<Set<string>>(new Set())
+  const [isSearching, setIsSearching] = useState(false)
+  const [isAdding, setIsAdding] = useState(false)
+  const [addedCount, setAddedCount] = useState(0)
   const [error, setError] = useState<string | null>(null)
 
   function reset() {
-    setUrl('')
-    setPreview(null)
-    setPayload(null)
-    setIsPreviewing(false)
-    setIsConfirming(false)
-    setDone(false)
+    setQuery('')
+    setResults(null)
+    setSelected(new Set())
+    setIsSearching(false)
+    setIsAdding(false)
+    setAddedCount(0)
     setError(null)
   }
 
@@ -40,38 +39,56 @@ export function AddRestaurantSheet({ onAdded }: AddRestaurantSheetProps) {
     if (!next) setTimeout(reset, 200)
   }
 
-  async function handlePreview() {
-    const trimmed = url.trim()
-    if (!trimmed || isPreviewing) return
-    setIsPreviewing(true)
+  async function handleSearch() {
+    const trimmed = query.trim()
+    if (!trimmed || isSearching) return
+    setIsSearching(true)
     setError(null)
+    setResults(null)
+    setSelected(new Set())
     try {
-      const res = await previewRestaurant(trimmed)
-      setPreview(res.preview)
-      setPayload(res.payload)
+      const res = await searchPlaces(trimmed)
+      setResults(res)
+      if (res.length === 0) setError('搵唔到餐廳,試下換個名或者貼上連結。')
     } catch (err) {
-      setError(err instanceof Error ? err.message : '預覽失敗,請檢查連結。')
+      setError(err instanceof Error ? err.message : '搜尋失敗,請再試。')
     } finally {
-      setIsPreviewing(false)
+      setIsSearching(false)
     }
   }
 
-  async function handleConfirm() {
-    if (!payload || isConfirming) return
-    setIsConfirming(true)
+  function toggle(placeId: string, disabled: boolean) {
+    if (disabled) return
+    setSelected((prev) => {
+      const next = new Set(prev)
+      if (next.has(placeId)) next.delete(placeId)
+      else next.add(placeId)
+      return next
+    })
+  }
+
+  async function handleAdd() {
+    if (selected.size === 0 || isAdding) return
+    setIsAdding(true)
     setError(null)
     try {
-      await confirmRestaurant(payload)
-      setDone(true)
+      const res = await addRestaurants([...selected])
       onAdded()
-      setTimeout(() => handleOpenChange(false), 900)
+      if (res.failed > 0) {
+        setError(`加咗 ${res.added} 間,${res.failed} 間失敗。`)
+        setIsAdding(false)
+        // Drop the successful ones from selection so retry only re-adds fails.
+        const failedIds = new Set(res.results.filter((r) => !r.ok).map((r) => r.placeId))
+        setSelected(failedIds)
+      } else {
+        setAddedCount(res.added)
+        setTimeout(() => handleOpenChange(false), 900)
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : '加入失敗。')
-      setIsConfirming(false)
+      setIsAdding(false)
     }
   }
-
-  const step: 'url' | 'preview' = preview ? 'preview' : 'url'
 
   return (
     <Sheet open={open} onOpenChange={handleOpenChange}>
@@ -93,169 +110,129 @@ export function AddRestaurantSheet({ onAdded }: AddRestaurantSheetProps) {
       >
         <div className="mx-auto mb-4 h-1.5 w-10 rounded-full bg-muted" aria-hidden />
 
-        <div className="flex items-center gap-2 mb-4">
-          {step === 'preview' && !done && (
-            <motion.button
-              whileTap={{ scale: 0.9 }}
-              onClick={() => {
-                setPreview(null)
-                setPayload(null)
-                setError(null)
-              }}
-              aria-label="返回上一步"
-              className="w-8 h-8 rounded-full bg-muted flex items-center justify-center shrink-0 cursor-pointer"
+        <SheetTitle className="font-heading text-xl mb-4">新增餐廳</SheetTitle>
+
+        {/* Search input */}
+        <div className="flex flex-col gap-2">
+          <label htmlFor="place-query" className="text-sm text-muted-foreground">
+            輸入餐廳名或貼上 Google Maps 連結
+          </label>
+          <div className="flex gap-2">
+            <input
+              id="place-query"
+              type="text"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+              placeholder="例如:添好運 或 maps.app.goo.gl/…"
+              className="h-12 flex-1 rounded-xl border border-border bg-background px-4 text-base outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
+            />
+            <Button
+              onClick={handleSearch}
+              disabled={!query.trim() || isSearching}
+              aria-label="搜尋"
+              className="h-12 w-12 shrink-0 rounded-xl bg-primary hover:bg-primary/90 p-0"
             >
-              <ArrowLeft className="w-4 h-4" />
-            </motion.button>
+              {isSearching ? (
+                <RefreshCw className="w-5 h-5 animate-spin" />
+              ) : (
+                <Search className="w-5 h-5" />
+              )}
+            </Button>
+          </div>
+          {error && (
+            <p role="alert" className="flex items-center gap-1.5 text-xs text-destructive">
+              <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+              {error}
+            </p>
           )}
-          <SheetTitle className="font-heading text-xl">
-            {step === 'url' ? '新增餐廳' : '確認資料'}
-          </SheetTitle>
         </div>
 
+        {/* Results list */}
         <AnimatePresence mode="wait">
-          {step === 'url' ? (
+          {results && results.length > 0 && (
             <motion.div
-              key="url"
-              initial={{ opacity: 0, x: -16 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -16 }}
+              key="results"
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0 }}
               transition={{ duration: 0.2 }}
-              className="flex flex-col gap-3"
+              className="mt-4 flex flex-col gap-2"
             >
-              <label htmlFor="maps-url" className="text-sm text-muted-foreground">
-                貼上 Google Maps 餐廳連結
-              </label>
-              <input
-                id="maps-url"
-                type="url"
-                inputMode="url"
-                value={url}
-                onChange={(e) => setUrl(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && handlePreview()}
-                placeholder="https://maps.app.goo.gl/…"
-                className="h-12 rounded-xl border border-border bg-background px-4 text-base outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
-              />
-              {error && (
-                <p role="alert" className="flex items-center gap-1.5 text-xs text-destructive">
-                  <AlertCircle className="w-3.5 h-3.5" />
-                  {error}
-                </p>
-              )}
-              <Button
-                onClick={handlePreview}
-                disabled={!url.trim() || isPreviewing}
-                className="h-12 rounded-xl bg-primary hover:bg-primary/90 gap-2 mt-1"
-              >
-                {isPreviewing ? (
-                  <>
-                    <RefreshCw className="w-4 h-4 animate-spin" />
-                    載入緊…
-                  </>
-                ) : (
-                  '預覽'
-                )}
-              </Button>
-            </motion.div>
-          ) : (
-            <motion.div
-              key="preview"
-              initial={{ opacity: 0, x: 16 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: 16 }}
-              transition={{ duration: 0.2 }}
-              className="flex flex-col gap-4"
-            >
-              {preview && (
-                <>
-                  <BlurhashImage
-                    src={preview.imageUrl}
-                    blurhash={null}
-                    alt={preview.name}
-                    className="w-full aspect-[16/10] rounded-2xl"
-                  />
-                  <div>
-                    <div className="flex items-start justify-between gap-3">
-                      <h3 className="font-bold text-lg text-foreground leading-tight">
-                        {preview.name}
-                      </h3>
-                      {preview.priceLevel !== null && (
-                        <span className="shrink-0 text-sm font-semibold text-muted-foreground mt-1">
-                          {PRICE_SYMBOLS[preview.priceLevel]}
-                        </span>
-                      )}
-                    </div>
-                    <div className="flex items-center gap-2 mt-1 text-sm text-muted-foreground">
-                      <span>{preview.typeLabel}</span>
-                      {preview.rating !== null && (
-                        <>
-                          <span aria-hidden>·</span>
-                          <span className="flex items-center gap-1 font-semibold text-foreground">
-                            <Star className="w-3.5 h-3.5 fill-primary stroke-primary" />
-                            {preview.rating}
-                          </span>
-                          {preview.ratingCount !== null && <span>({preview.ratingCount})</span>}
-                        </>
-                      )}
-                    </div>
-                  </div>
-
-                  {preview.tags.length > 0 && (
-                    <div className="flex flex-wrap gap-1.5">
-                      {preview.tags.map((tag) => (
-                        <span
-                          key={tag}
-                          className="text-xs bg-muted text-muted-foreground rounded-full px-2.5 py-1"
-                        >
-                          {tag}
-                        </span>
-                      ))}
-                    </div>
-                  )}
-
-                  {preview.address && (
-                    <div className="flex items-start gap-2.5 text-sm">
-                      <MapPin className="w-4 h-4 mt-0.5 text-muted-foreground shrink-0" />
-                      <span className="text-foreground">{preview.address}</span>
-                    </div>
-                  )}
-
-                  {preview.alreadyExists ? (
-                    <div className="flex items-center gap-2 rounded-xl bg-muted px-4 py-3 text-sm text-muted-foreground">
-                      <AlertCircle className="w-4 h-4 shrink-0" />
-                      呢間已經喺資料庫喇。
-                    </div>
-                  ) : (
-                    <>
-                      {error && (
-                        <p role="alert" className="flex items-center gap-1.5 text-xs text-destructive">
-                          <AlertCircle className="w-3.5 h-3.5" />
-                          {error}
+              {results.map((r) => {
+                const isSelected = selected.has(r.placeId)
+                return (
+                  <button
+                    key={r.placeId}
+                    onClick={() => toggle(r.placeId, r.alreadyExists)}
+                    disabled={r.alreadyExists}
+                    aria-pressed={isSelected}
+                    className={cn(
+                      'flex items-center gap-3 rounded-2xl border p-2.5 text-left transition-colors',
+                      r.alreadyExists
+                        ? 'border-border bg-muted/40 opacity-60 cursor-not-allowed'
+                        : 'cursor-pointer',
+                      isSelected
+                        ? 'border-primary bg-primary/5'
+                        : !r.alreadyExists && 'border-border hover:bg-muted/50',
+                    )}
+                  >
+                    <BlurhashImage
+                      src={r.imageUrl}
+                      blurhash={null}
+                      alt={r.name}
+                      className="w-16 h-16 rounded-xl shrink-0"
+                    />
+                    <div className="min-w-0 flex-1">
+                      <p className="font-semibold text-foreground leading-tight truncate">
+                        {r.name}
+                      </p>
+                      <p className="text-xs text-muted-foreground mt-0.5">{r.typeLabel}</p>
+                      {r.address && (
+                        <p className="flex items-center gap-1 text-xs text-muted-foreground mt-1 truncate">
+                          <MapPin className="w-3 h-3 shrink-0" />
+                          <span className="truncate">{r.address}</span>
                         </p>
                       )}
-                      <Button
-                        onClick={handleConfirm}
-                        disabled={isConfirming || done}
-                        className="h-12 rounded-xl bg-primary hover:bg-primary/90 gap-2"
-                      >
-                        {done ? (
-                          <>
-                            <Check className="w-4 h-4" />
-                            已加入!
-                          </>
-                        ) : isConfirming ? (
-                          <>
-                            <RefreshCw className="w-4 h-4 animate-spin" />
-                            加入緊…
-                          </>
-                        ) : (
-                          '加入資料庫'
-                        )}
-                      </Button>
-                    </>
-                  )}
-                </>
-              )}
+                    </div>
+                    {/* Selection indicator */}
+                    <span
+                      className={cn(
+                        'w-6 h-6 rounded-full border flex items-center justify-center shrink-0',
+                        r.alreadyExists
+                          ? 'border-transparent bg-muted text-muted-foreground'
+                          : isSelected
+                            ? 'border-primary bg-primary text-primary-foreground'
+                            : 'border-border',
+                      )}
+                    >
+                      {(isSelected || r.alreadyExists) && <Check className="w-4 h-4" />}
+                    </span>
+                  </button>
+                )
+              })}
+
+              <Button
+                onClick={handleAdd}
+                disabled={selected.size === 0 || isAdding || addedCount > 0}
+                className="h-12 rounded-xl bg-primary hover:bg-primary/90 gap-2 mt-2"
+              >
+                {addedCount > 0 ? (
+                  <>
+                    <Check className="w-4 h-4" />
+                    已加入 {addedCount} 間!
+                  </>
+                ) : isAdding ? (
+                  <>
+                    <RefreshCw className="w-4 h-4 animate-spin" />
+                    加入緊…
+                  </>
+                ) : selected.size > 0 ? (
+                  `加入 ${selected.size} 間餐廳`
+                ) : (
+                  '揀啲餐廳加入'
+                )}
+              </Button>
             </motion.div>
           )}
         </AnimatePresence>

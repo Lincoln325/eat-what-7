@@ -19,6 +19,7 @@ export interface RestaurantListItem {
   primary_image_path: string | null
   image_blurhash: string | null
   google_maps_uri: string | null
+  region: string | null
 }
 
 export interface ListRestaurantsOptions {
@@ -37,7 +38,7 @@ export async function listRestaurants(
 
   let query = supabase
     .from('restaurants')
-    .select('id, name, name_zh, primary_type, primary_type_display_name_zh, tags, rating, price_level, primary_image_path, image_blurhash, google_maps_uri')
+    .select('id, name, name_zh, primary_type, primary_type_display_name_zh, tags, rating, price_level, primary_image_path, image_blurhash, google_maps_uri, region')
     .range(offset, offset + limit - 1)
 
   if (cuisineKeys && cuisineKeys.length > 0) {
@@ -58,6 +59,19 @@ export async function findByPlaceId(placeId: string): Promise<RestaurantRecord |
     .eq('google_place_id', placeId)
     .single()
   return data ?? null
+}
+
+// Which of these place ids already exist — one query, used to flag duplicates
+// in the add-search results so the client can disable already-saved places.
+export async function findManyByPlaceIds(
+  placeIds: string[],
+): Promise<Array<{ id: string; google_place_id: string }>> {
+  if (placeIds.length === 0) return []
+  const { data } = await createAdminClient()
+    .from('restaurants')
+    .select('id, google_place_id')
+    .in('google_place_id', placeIds)
+  return data ?? []
 }
 
 const DETAIL_COLUMNS =

@@ -1,3 +1,5 @@
+import { extractRegion } from '@/lib/domain/region'
+
 export type PriceLevelEnum =
   | 'PRICE_LEVEL_FREE'
   | 'PRICE_LEVEL_INEXPENSIVE'
@@ -21,6 +23,7 @@ export interface PlaceDetails {
   primaryTypeDisplayName?: { text: string; languageCode?: string }
   googleMapsUri?: string
   photos?: Array<{ name: string; widthPx: number; heightPx: number }>
+  addressComponents?: Array<{ longText?: string; shortText?: string; types?: string[] }>
   [key: string]: unknown
 }
 
@@ -46,6 +49,7 @@ export interface RestaurantRow {
   primary_type: string | null
   primary_type_display_name_zh: string | null
   google_maps_uri: string | null
+  region: string | null
   raw_place_data: BilingualPlaceDetails
 }
 
@@ -86,6 +90,7 @@ export function mapPlaceToRestaurantRow(place: BilingualPlaceDetails): Restauran
     primary_type: en.primaryType ?? null,
     primary_type_display_name_zh: zh_hk.primaryTypeDisplayName?.text ?? null,
     google_maps_uri: en.googleMapsUri ?? null,
+    region: extractRegion(place),
     raw_place_data: place,
   }
 }

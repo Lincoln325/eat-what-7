@@ -12,6 +12,8 @@ export interface Restaurant {
   // tag-labels.ts) — never render raw Google type strings directly.
   tags: string[]
   googleMapsUri: string | null
+  // Short district/area label (e.g. 中環, 銅鑼灣) shown on the card.
+  region: string | null
 }
 
 // Full detail view for the RestaurantDetailSheet — a superset of the card's
@@ -39,19 +41,18 @@ export interface RestaurantDetail {
 // Preview of a place resolved from a Google Maps URL, before it's committed
 // to the database. Carries the raw bilingual payload so confirm can insert
 // without a second details call.
-export interface PlacePreview {
+// One selectable card in the add-restaurant search results. Rating/price are
+// intentionally absent — the search tier doesn't return them; they're fetched
+// and stored only when the user confirms the add.
+export interface PlaceSearchResult {
+  placeId: string
   name: string
   typeLabel: string
-  imageUrl: string | null
-  rating: number | null
-  ratingCount: number | null
-  priceLevel: number | null
   address: string | null
   tags: string[]
+  imageUrl: string | null
   alreadyExists: boolean
   existingId: string | null
-  // Opaque handoff to POST /confirm — the resolved place id.
-  placeId: string
 }
 
 export type AppView = 'swipe' | 'selection'

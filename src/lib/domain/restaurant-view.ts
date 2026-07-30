@@ -12,6 +12,7 @@ export interface RestaurantSource {
   primary_image_path: string | null
   image_blurhash: string | null
   google_maps_uri: string | null
+  region: string | null
 }
 
 // Pure: map a DB row to the frontend view model, resolving image URL.
@@ -29,5 +30,6 @@ export function mapToRestaurant(row: RestaurantSource, imageBaseUrl: string): Re
     priceLevel: row.price_level,
     tags: translateTags(row.tags),
     googleMapsUri: row.google_maps_uri,
+    region: row.region,
   }
 }
